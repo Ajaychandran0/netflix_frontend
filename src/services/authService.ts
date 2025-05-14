@@ -62,3 +62,7 @@ export const fetchUserProfile = async (): Promise<User> => {
     throw new Error('An error occurred while fetching the user profile');
   }
 };
+
+export const registerUser = async (formData: { email: string; password: string }) => {
+  return axiosInstance.post('/register', formData);
+};
