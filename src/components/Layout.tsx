@@ -3,16 +3,22 @@ import Header from './Header';
 import { Box } from '@mui/material';
 
 interface LayoutProps {
-  children: React.ReactNode;
+    children: React.ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  return (
-    <Box sx={{ backgroundColor: '#141414', minHeight: '100vh', color: 'white' }}>
-      <Header />
-      <Box sx={{ paddingTop: '64px' }}>{children}</Box>
-    </Box>
-  );
+    return (
+        <Box sx={{
+            backgroundColor: '#141414',
+            width: '100vw',
+            overflowX: 'hidden',
+            overflowY: 'auto',
+            minHeight: '100vh', color: 'white'
+        }}>
+            <Header />
+            <Box sx={{ paddingTop: '64px' }}>{children}</Box>
+        </Box>
+    );
 };
 
 export default Layout;

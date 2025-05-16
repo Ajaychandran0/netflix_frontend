@@ -12,7 +12,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { login } from '../store/slices/authSlice';
-import { registerUser } from '../services/authService';
+import { signUp } from '../services/authService';
 import useAuth from '../hooks/useAuth';
 
 const Register = () => {
@@ -35,7 +35,7 @@ const Register = () => {
       return;
     }
     try {
-      const response = await registerUser({ email: formData.email, password: formData.password });
+      const response = await signUp({ email: formData.email, password: formData.password });
       const { token, user } = response.data;
       localStorage.setItem('token', token);
       dispatch(login(user));
@@ -46,13 +46,12 @@ const Register = () => {
   };
 
   return (
-    <Box sx={{ backgroundColor: '#141414', width: '100vw', minHeight: '100vh' }}>
+    <Box>
       <Box
         display="flex"
         justifyContent="center"
         alignItems="center"
         minHeight="80vh"
-        width={"100vw"}
       >
         <Paper
           elevation={3}

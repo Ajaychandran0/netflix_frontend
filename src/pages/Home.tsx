@@ -13,7 +13,7 @@ const dummyMovies = [
 
 const Home = () => {
   return (
-    <Box sx={{ backgroundColor: '#141414', width: '100vw', minHeight: '100vh' }}>
+    <Box>
       {/* Hero Section */}
       <Box
         sx={{

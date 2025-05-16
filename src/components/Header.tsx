@@ -40,7 +40,7 @@ const Header: React.FC = () => {
   };
 
   return (
-    <AppBar position="fixed" sx={{ backgroundColor: '#141414', width: '100vw' }}>
+    <AppBar position="fixed" sx={{ backgroundColor: '#141414' }}>
       <Toolbar sx={{ px: '2rem', justifyContent: 'space-between', paddingTop: '1rem' }}>
         <Box sx={{ flexGrow: 1 }}>
           <a href="/">

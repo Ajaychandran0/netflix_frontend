@@ -54,13 +54,12 @@ const UserProfile: React.FC<UserProfileProps> = () => {
   }
 
   return (
-    <Box sx={{ backgroundColor: '#141414', width: '100vw', minHeight: '100vh' }}>
+    <Box >
       <Box
         display="flex"
         justifyContent="center"
         alignItems="center"
         minHeight="80vh"
-        width="100vw"
       >
         <Paper
           elevation={3}
