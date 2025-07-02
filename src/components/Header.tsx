@@ -1,4 +1,4 @@
-import { AppBar, Toolbar, Typography, Box, Avatar, Menu, MenuItem } from '@mui/material';
+import { AppBar, Toolbar, Typography, Box, Avatar, Menu, MenuItem, Button } from '@mui/material';
 import { useDispatch } from 'react-redux';
 import { logout, login } from '../store/slices/authSlice';
 import { useState, useEffect } from 'react';
@@ -8,7 +8,7 @@ import { fetchUserProfile } from '../services/authService';
 import { User } from '../types/auth';
 
 const Header: React.FC = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isAdmin } = useAuth();
   console.log('Header', { isAuthenticated, user }, "in header");
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -53,6 +53,15 @@ const Header: React.FC = () => {
         </Box>
         {isAuthenticated ? (
           <>
+            {isAdmin && (
+              <Button
+                color="inherit"
+                sx={{ mr: 2 }}
+                onClick={() => navigate('/dashboard')}
+              >
+                Dashboard
+              </Button>
+            )}
             <Avatar onClick={handleMenuOpen} sx={{ cursor: 'pointer' }}>
               {user?.firstName?.[0] || 'U'}
             </Avatar>

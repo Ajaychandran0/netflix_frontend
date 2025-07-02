@@ -3,6 +3,7 @@ export interface User {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  role?: 'ADMIN' | 'USER';
 }
 
 export interface AuthState {
