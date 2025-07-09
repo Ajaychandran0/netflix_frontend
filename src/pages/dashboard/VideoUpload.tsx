@@ -36,18 +36,37 @@ const VideoUpload: React.FC = () => {
   };
 
   return (
-    <Paper sx={{ p: 3, backgroundColor: '#181818', color: 'white', maxWidth: 600 }}>
+    <Paper sx={{ p: 3, backgroundColor: '#1e1e1e', color: 'white', maxWidth: 600 }}>
       <Typography variant="h6" gutterBottom>Upload Video</Typography>
-      <form onSubmit={handleUpload}>
+      <Box component="form" onSubmit={handleUpload} mt={2}>
         <TextField
           label="Title"
           name="title"
+          variant='filled'
+          slotProps={{
+            input: {
+              sx: { color: 'white' }
+            },
+            inputLabel: {
+              sx: { color: '#b3b3b3' }
+            }
+          }}
           value={form.title}
           onChange={handleChange}
           fullWidth
-          sx={{ mb: 2 }}
+          sx={{ mb: 2, color: 'white' }}
         />
+
         <TextField
+          variant='filled'
+          slotProps={{
+            input: {
+              sx: { color: 'white' }
+            },
+            inputLabel: {
+              sx: { color: '#b3b3b3' }
+            }
+          }}
           label="Description"
           name="description"
           value={form.description}
@@ -66,7 +85,7 @@ const VideoUpload: React.FC = () => {
           </Button>
         </Box>
         {error && <Typography color="error" mt={2}>{error}</Typography>}
-      </form>
+      </Box>
     </Paper>
   );
 };

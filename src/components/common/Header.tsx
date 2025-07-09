@@ -1,11 +1,11 @@
 import { AppBar, Toolbar, Typography, Box, Avatar, Menu, MenuItem, Button } from '@mui/material';
 import { useDispatch } from 'react-redux';
-import { logout, login } from '../store/slices/authSlice';
+import { logout, login } from '../../store/slices/authSlice';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useAuth from '../hooks/useAuth';
-import { fetchUserProfile } from '../services/authService';
-import { User } from '../types/auth';
+import useAuth from '../../hooks/useAuth';
+import { fetchUserProfile } from '../../services/authService';
+import { User } from '../../types/auth';
 
 const Header: React.FC = () => {
   const { isAuthenticated, user, isAdmin } = useAuth();

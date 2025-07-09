@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Drawer, List, ListItem, ListItemButton, ListItemText, Typography, Divider } from '@mui/material';
-import VideoUpload from './dashboard/VideoUpload';
+import VideoUpload from './dashboard/VideoUploadDummy';
 import VideoList from './dashboard/VideoList';
 import UserList from './dashboard/UserList';
 import Analytics from './dashboard/Analytics';
