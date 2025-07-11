@@ -1,89 +1,120 @@
-import React, { useState, useRef } from 'react';
 import { Box, Typography, Button, TextField, Paper } from '@mui/material';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+import { useVideoUpload } from '../../hooks/useUpload';
+import FileSelector from '../../components/upload/FileSelector';
+import UploadProgress from '../../components/upload/UploadProgress';
+import { CHUNK_SIZE } from '../../utils/chunkFile';
+
+const SlotProps = {
+  input: {
+    sx: { color: 'white' }
+  },
+  inputLabel: {
+    sx: { color: '#b3b3b3' }
+  }
+};
+
+const validationSchema = Yup.object({
+  title: Yup.string().required('Title is required'),
+  description: Yup.string().required('Description is required'),
+  video: Yup.mixed().required('A video file is required'),
+  thumbnail: Yup.mixed().notRequired(),
+});
 
 const VideoUpload: React.FC = () => {
-  const [form, setForm] = useState<{ title: string; description: string; thumbnail: File | string; video: File | null }>({ title: '', description: '', thumbnail: '', video: null });
-  const [error, setError] = useState('');
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { upload, uploading, progress, error } = useVideoUpload();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, files } = e.target;
-    if (name === 'video' && files) {
-      setForm((prev) => ({ ...prev, video: files[0] }));
-    } else if (name === 'thumbnail' && files) {
-      setForm((prev) => ({ ...prev, thumbnail: files[0] }));
-    } else {
-      setForm((prev) => ({ ...prev, [name]: value }));
-    }
-  };
-
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    if (!form.title || !form.description || !form.video) {
-      setError('Please fill all required fields and select a video file.');
-      return;
-    }
-    setUploading(true);
-    // TODO: Replace with actual API call
-    setTimeout(() => {
-      setUploading(false);
-      setForm({ title: '', description: '', thumbnail: '', video: null });
-      setError('');
-      alert('Video uploaded (mock)!');
-    }, 1000);
-  };
+  const formik = useFormik({
+    initialValues: {
+      title: '',
+      description: '',
+      video: null as File | null,
+      thumbnail: null as File | null,
+    },
+    validationSchema,
+    onSubmit: async (values, { resetForm }) => {
+      if (!values.video) return;
+      const meta = {
+        title: values.title,
+        description: values.description,
+        filename: values.video.name,
+        filesize: values.video.size,
+        total_parts: Math.ceil(values.video.size / CHUNK_SIZE),
+      };
+      await upload(meta, values.video);
+      resetForm();
+    },
+  });
 
   return (
     <Paper sx={{ p: 3, backgroundColor: '#1e1e1e', color: 'white', maxWidth: 600 }}>
-      <Typography variant="h6" gutterBottom>Upload Video</Typography>
-      <Box component="form" onSubmit={handleUpload} mt={2}>
+      <Typography variant="h6">Upload Video</Typography>
+      <Box component="form" mt={2} onSubmit={formik.handleSubmit}>
         <TextField
           label="Title"
           name="title"
           variant='filled'
-          slotProps={{
-            input: {
-              sx: { color: 'white' }
-            },
-            inputLabel: {
-              sx: { color: '#b3b3b3' }
-            }
-          }}
-          value={form.title}
-          onChange={handleChange}
+          slotProps={SlotProps}
+          value={formik.values.title}
+          onChange={formik.handleChange}
           fullWidth
+          required
           sx={{ mb: 2, color: 'white' }}
+          error={Boolean(formik.errors.title && formik.touched.title)}
+          helperText={formik.touched.title && formik.errors.title}
         />
-
         <TextField
           variant='filled'
-          slotProps={{
-            input: {
-              sx: { color: 'white' }
-            },
-            inputLabel: {
-              sx: { color: '#b3b3b3' }
-            }
-          }}
+          slotProps={SlotProps}
           label="Description"
           name="description"
-          value={form.description}
-          onChange={handleChange}
+          value={formik.values.description}
+          onChange={formik.handleChange}
           fullWidth
+          required
           sx={{ mb: 2 }}
+          error={Boolean(formik.errors.description && formik.touched.description)}
+          helperText={formik.touched.description && formik.errors.description}
         />
-        <Button variant="contained" component="label" sx={{ mb: 2 }}>
-          Select Video
-          <input type="file" name="video" accept="video/*" hidden onChange={handleChange} ref={fileInputRef} />
-        </Button>
-        {form.video && <Typography variant="body2">Selected: {form.video.name}</Typography>}
+        <Box display={'flex'} flexDirection='column' gap={2}>
+          <FileSelector
+            name="video"
+            label="Select Video"
+            accept="video/*"
+            onChange={file => formik.setFieldValue('video', file)}
+            selectedFile={formik.values.video}
+            uploading={uploading}
+            previewType="video"
+          />
+
+          <FileSelector
+            name="thumbnail"
+            label="Select Thumbnail (optional)"
+            accept="image/*"
+            onChange={file => formik.setFieldValue('thumbnail', file)}
+            selectedFile={formik.values.thumbnail}
+            uploading={uploading}
+            previewType="image"
+          />
+        </Box>
         <Box mt={2}>
-          <Button type="submit" variant="contained" color="primary" disabled={uploading}>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={
+              uploading ||
+              !formik.values.video ||
+              !formik.values.title ||
+              !formik.values.description ||
+              !formik.isValid ||
+              !formik.dirty
+            }
+          >
             {uploading ? 'Uploading...' : 'Upload'}
           </Button>
         </Box>
+        {uploading && <UploadProgress value={progress} />}
         {error && <Typography color="error" mt={2}>{error}</Typography>}
       </Box>
     </Paper>
@@ -91,3 +122,7 @@ const VideoUpload: React.FC = () => {
 };
 
 export default VideoUpload;
+
+
+
+
