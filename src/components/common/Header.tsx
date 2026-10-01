@@ -15,6 +15,10 @@ const Header: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   useEffect(() => {
+    if (!isAuthenticated) setAnchorEl(null);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
     if (!user && isAuthenticated) {
       fetchUserProfile()
         .then((user: User) => {
@@ -35,6 +39,7 @@ const Header: React.FC = () => {
   };
 
   const handleLogout = () => {
+    setAnchorEl(null);
     dispatch(logout());
     navigate('/login');
   };

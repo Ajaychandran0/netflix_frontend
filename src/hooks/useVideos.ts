@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { listVideos } from '../services/videoService';
 import type { VideoSummary } from '../types/video';
 
@@ -6,6 +6,7 @@ export function useVideos() {
   const [videos, setVideos] = useState<VideoSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const initialLoadStarted = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -20,6 +21,10 @@ export function useVideos() {
   }, []);
 
   useEffect(() => {
+    // The app runs under React StrictMode, which replays mount effects in
+    // development. Guard the initial catalogue request so it stays single.
+    if (initialLoadStarted.current) return;
+    initialLoadStarted.current = true;
     void refresh();
   }, [refresh]);
 

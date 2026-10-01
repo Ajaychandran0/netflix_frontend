@@ -38,8 +38,13 @@ const Login = () => {
       navigate('/');
     } catch (error) {
       console.log('Login error:', error);
-      setError(typeof error === 'string' ? error : 'An unexpected error occurred');
+      setError(error instanceof Error ? error.message : typeof error === 'string' ? error : 'An unexpected error occurred');
     }
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void handleLogin(email, password);
   };
 
   return (
@@ -67,6 +72,7 @@ const Login = () => {
             Sign In
           </Typography>
 
+          <Box component="form" onSubmit={handleSubmit}>
           <Stack spacing={2}>
             <TextField
               label="Email or phone number"
@@ -76,6 +82,7 @@ const Login = () => {
               InputProps={{ sx: { color: 'white' } }}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              required
             />
             <TextField
               label="Password"
@@ -86,12 +93,13 @@ const Login = () => {
               InputProps={{ sx: { color: 'white' } }}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              required
             />
             <Button
               variant="contained"
               color="primary"
               fullWidth
-              onClick={() => handleLogin(email, password)}
+              type="submit"
             >
               Sign In
             </Button>
@@ -109,6 +117,7 @@ const Login = () => {
               </Link>
             </Typography>
           </Stack>
+          </Box>
         </Paper>
       </Box>
     </Box>

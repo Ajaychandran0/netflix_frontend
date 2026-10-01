@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Box, Button, Chip, Container, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Container, Dialog, DialogActions, DialogContent, DialogTitle, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import MovieOutlinedIcon from '@mui/icons-material/MovieOutlined';
@@ -10,6 +10,8 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import { useNavigate } from 'react-router-dom';
 import { useMyUploads } from '../hooks/useMyUploads';
+import { deleteVideo, updateVideo } from '../services/videoService';
+import type { UploadStatus } from '../types/video';
 import type { VideoStatus } from '../types/video';
 
 const statusColor: Record<VideoStatus, 'default' | 'info' | 'warning' | 'success' | 'error'> = {
@@ -23,8 +25,14 @@ function formatDate(value: string) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { uploads, error } = useMyUploads();
+  const { uploads, error, refresh } = useMyUploads({ poll: false });
   const [search, setSearch] = useState('');
+  const [editVideo, setEditVideo] = useState<UploadStatus | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<UploadStatus | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const filteredUploads = useMemo(
     () => uploads.filter((video) => video.title.toLowerCase().includes(search.trim().toLowerCase())),
     [uploads, search],
@@ -33,6 +41,40 @@ export default function Dashboard() {
   const processing = uploads.filter((video) => ['UPLOADING', 'QUEUED', 'PROCESSING'].includes(video.status)).length;
   const failed = uploads.filter((video) => video.status === 'FAILED').length;
   const views = uploads.filter((video) => video.status === 'COMPLETED').reduce((total, _video, index) => total + demoViews[index % demoViews.length], 0);
+  const openEdit = (video: UploadStatus) => {
+    setMutationError(null);
+    setEditVideo(video);
+    setEditTitle(video.title);
+    setEditDescription(video.description ?? '');
+  };
+  const saveEdit = async () => {
+    if (!editVideo) return;
+    setSaving(true);
+    setMutationError(null);
+    try {
+      await updateVideo(editVideo.id, { title: editTitle.trim(), description: editDescription.trim() });
+      setEditVideo(null);
+      await refresh();
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : 'Unable to update this video.');
+    } finally {
+      setSaving(false);
+    }
+  };
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setSaving(true);
+    setMutationError(null);
+    try {
+      await deleteVideo(deleteTarget.id);
+      setDeleteTarget(null);
+      await refresh();
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : 'Unable to delete this video.');
+    } finally {
+      setSaving(false);
+    }
+  };
   const stats = [
     { label: 'Published videos', value: published, note: 'Your completed uploads', icon: <MovieOutlinedIcon />, color: '#f24752' },
     { label: 'Total views', value: views.toLocaleString(), note: 'Demo analytics', icon: <VisibilityOutlinedIcon />, color: '#8c7bff' },
@@ -67,6 +109,7 @@ export default function Dashboard() {
           Total views are sample dashboard data for the MVP. Live analytics will appear when the backend provides them.
         </Alert>
         {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+        {mutationError && <Alert severity="error" sx={{ mb: 3 }} onClose={() => setMutationError(null)}>{mutationError}</Alert>}
 
         <Paper elevation={0} sx={{ border: 1, borderColor: 'rgba(255,255,255,.08)', borderRadius: 3, overflow: 'hidden', bgcolor: '#17171b' }}>
           <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} justifyContent="space-between" spacing={2} sx={{ p: { xs: 2, md: 2.5 } }}>
@@ -82,18 +125,31 @@ export default function Dashboard() {
               <TableHead><TableRow sx={{ '& th': { color: 'text.secondary', borderColor: 'rgba(255,255,255,.08)', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.7 } }}>
                 <TableCell>Video</TableCell><TableCell>Status</TableCell><TableCell>Uploaded</TableCell><TableCell align="right">Views</TableCell><TableCell align="right">Actions</TableCell>
               </TableRow></TableHead>
-              <TableBody>{filteredUploads.map((video, index) => <TableRow key={video.id} hover sx={{ '& td': { borderColor: 'rgba(255,255,255,.07)' } }}>
+              <TableBody>{filteredUploads.map((video) => <TableRow key={video.id} hover sx={{ '& td': { borderColor: 'rgba(255,255,255,.07)' } }}>
                 <TableCell><Stack direction="row" spacing={1.5} alignItems="center"><Box component="img" src={video.thumbnail_url || undefined} alt="" sx={{ width: 88, height: 52, borderRadius: 1.5, objectFit: 'cover', bgcolor: '#25252b' }} /><Box><Typography fontWeight={650}>{video.title}</Typography>{video.current_stage && <Typography variant="caption" color="text.secondary">{video.current_stage.replace(/_/g, ' ')}</Typography>}{video.last_error && <Typography variant="caption" color="error.main" display="block">{video.last_error}</Typography>}</Box></Stack></TableCell>
                 <TableCell><Chip size="small" label={video.status.toLowerCase()} color={statusColor[video.status]} sx={{ textTransform: 'capitalize' }} /></TableCell>
                 <TableCell sx={{ color: 'text.secondary' }}>{formatDate(video.created_at)}</TableCell>
-                <TableCell align="right" sx={{ color: 'text.secondary' }}>{video.status === 'COMPLETED' ? demoViews[index % demoViews.length].toLocaleString() : '—'}</TableCell>
-                <TableCell align="right"><Stack direction="row" justifyContent="flex-end" spacing={0.5}><Button size="small" disabled title="Video editing API is not available yet" startIcon={<EditOutlinedIcon fontSize="small" />}>Edit</Button><Button size="small" color="error" disabled title="Video deletion API is not available yet" startIcon={<DeleteOutlineRoundedIcon fontSize="small" />}>Delete</Button></Stack></TableCell>
+                <TableCell align="right" sx={{ color: 'text.secondary' }}>{video.status === 'COMPLETED' ? demoViews[uploads.filter((item) => item.status === 'COMPLETED').findIndex((item) => item.id === video.id) % demoViews.length].toLocaleString() : '—'}</TableCell>
+                <TableCell align="right"><Stack direction="row" justifyContent="flex-end" spacing={0.5}><Button size="small" onClick={() => openEdit(video)} startIcon={<EditOutlinedIcon fontSize="small" />}>Edit</Button><Button size="small" color="error" onClick={() => { setMutationError(null); setDeleteTarget(video); }} startIcon={<DeleteOutlineRoundedIcon fontSize="small" />}>Delete</Button></Stack></TableCell>
               </TableRow>)}</TableBody>
             </Table>
           </TableContainer>}
         </Paper>
-        <Typography variant="caption" color="text.secondary" display="block" textAlign="right" mt={1.5}>Edit and delete will be enabled when owner scoped API operations are available.</Typography>
+        <Typography variant="caption" color="text.secondary" display="block" textAlign="right" mt={1.5}>Your dashboard refreshes when opened. Processing status updates on the upload page.</Typography>
       </Container>
+      <Dialog open={Boolean(editVideo)} onClose={() => !saving && setEditVideo(null)} fullWidth maxWidth="sm">
+        <DialogTitle>Edit video details</DialogTitle>
+        <DialogContent><Stack spacing={2} sx={{ pt: 1 }}>
+          <TextField label="Title" value={editTitle} onChange={(event) => setEditTitle(event.target.value)} required inputProps={{ maxLength: 255 }} />
+          <TextField label="Description" value={editDescription} onChange={(event) => setEditDescription(event.target.value)} multiline minRows={4} />
+        </Stack></DialogContent>
+        <DialogActions sx={{ p: 2 }}><Button onClick={() => setEditVideo(null)} disabled={saving}>Cancel</Button><Button variant="contained" onClick={() => void saveEdit()} disabled={saving || !editTitle.trim()}>Save changes</Button></DialogActions>
+      </Dialog>
+      <Dialog open={Boolean(deleteTarget)} onClose={() => !saving && setDeleteTarget(null)}>
+        <DialogTitle>Delete video?</DialogTitle>
+        <DialogContent><Typography>“{deleteTarget?.title}” will be removed from your library.</Typography></DialogContent>
+        <DialogActions sx={{ p: 2 }}><Button onClick={() => setDeleteTarget(null)} disabled={saving}>Cancel</Button><Button color="error" variant="contained" onClick={() => void confirmDelete()} disabled={saving}>Delete video</Button></DialogActions>
+      </Dialog>
     </Box>
   );
 }

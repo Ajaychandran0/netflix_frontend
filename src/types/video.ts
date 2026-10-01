@@ -10,6 +10,7 @@ export interface VideoSummary {
 }
 
 export interface UploadStatus extends VideoSummary {
+  description: string | null;
   current_stage: string | null;
   last_error: string | null;
 }
