@@ -7,9 +7,7 @@ import { handleApiError } from '../utils/apiUtils';
 import { login } from '../store/slices/authSlice';
 import useAuth from '../hooks/useAuth';
 
-interface UserProfileProps {}
-
-const UserProfile: React.FC<UserProfileProps> = () => {
+const UserProfile: React.FC = () => {
   const { user } = useAuth();
   const dispatch = useDispatch();
   const [editMode, setEditMode] = useState(false);
