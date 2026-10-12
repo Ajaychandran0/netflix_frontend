@@ -2,12 +2,22 @@ import { createTheme } from '@mui/material/styles';
 
 const theme = createTheme({
   palette: {
+    mode: 'dark',
+    background: {
+      default: '#0b0b0d',
+      paper: '#161619',
+    },
+    text: {
+      primary: '#f7f7f8',
+      secondary: '#a8a8b3',
+    },
     primary: {
       main: '#E50914', // Netflix red
     },
     secondary: {
       main: '#FFFFFF',
     },
+    divider: 'rgba(255,255,255,0.12)',
   },
   components: {
     MuiCssBaseline: {
@@ -24,6 +34,10 @@ const theme = createTheme({
           color: '#fff',
           overflowX: 'hidden',
           overflowY: 'auto',
+        },
+        '@keyframes pulse': {
+          '0%, 100%': { opacity: 0.45, transform: 'translateX(-20%)' },
+          '50%': { opacity: 1, transform: 'translateX(45%)' },
         },
         '*': {
           margin: 0,

@@ -7,15 +7,20 @@ export function useVideoUpload() {
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
+    const [phase, setPhase] = useState<'idle' | 'preparing' | 'uploading' | 'finalizing' | 'complete'>('idle');
 
     const upload = async (meta: UploadMetadata, file: File) => {
         setError(null);
         setUploading(true);
+        setProgress(0);
+        setPhase('preparing');
 
         try {
             const session = await initiateUpload(meta);
             const chunks = splitFileIntoChunks(file);
             const etags: CompletedPart[] = [];
+
+            setPhase('uploading');
 
             for (const part of session.parts) {
                 const chunk = chunks[part.part_number - 1];
@@ -35,9 +40,13 @@ export function useVideoUpload() {
                 setProgress(pct);
             }
 
+            setPhase('finalizing');
             await completeUpload({ video_id: session.video_id, upload_id: session.upload_id, parts: etags });
+            setPhase('complete');
+            return session.video_id;
         } catch (err) {
             setError((err as Error).message);
+            setPhase('idle');
             throw err;
         } finally {
             setUploading(false);
@@ -45,5 +54,5 @@ export function useVideoUpload() {
 
     };
 
-    return { upload, uploading, progress, error };
+    return { upload, uploading, progress, error, phase };
 }

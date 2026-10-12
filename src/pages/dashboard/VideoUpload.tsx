@@ -1,4 +1,4 @@
-import { Box, Typography, Button, TextField, Paper } from '@mui/material';
+import { Box, Typography, Button, TextField, Paper, Alert, Stack } from '@mui/material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useVideoUpload } from '../../hooks/useUpload';
@@ -19,18 +19,16 @@ const validationSchema = Yup.object({
   title: Yup.string().required('Title is required'),
   description: Yup.string().required('Description is required'),
   video: Yup.mixed().required('A video file is required'),
-  thumbnail: Yup.mixed().notRequired(),
 });
 
 const VideoUpload: React.FC = () => {
-  const { upload, uploading, progress, error } = useVideoUpload();
+  const { upload, uploading, progress, error, phase } = useVideoUpload();
 
   const formik = useFormik({
     initialValues: {
       title: '',
       description: '',
       video: null as File | null,
-      thumbnail: null as File | null,
     },
     validationSchema,
     onSubmit: async (values, { resetForm }) => {
@@ -42,15 +40,22 @@ const VideoUpload: React.FC = () => {
         filesize: values.video.size,
         total_parts: Math.ceil(values.video.size / CHUNK_SIZE),
       };
-      await upload(meta, values.video);
-      resetForm();
+      try {
+        await upload(meta, values.video);
+        resetForm();
+      } catch {
+        // The hook provides the user-facing message so the form can stay intact for a retry.
+      }
     },
   });
 
   return (
-    <Paper sx={{ p: 3, backgroundColor: '#1e1e1e', color: 'white', maxWidth: 600 }}>
-      <Typography variant="h6">Upload Video</Typography>
-      <Box component="form" mt={2} onSubmit={formik.handleSubmit}>
+    <Paper elevation={0} sx={{ p: { xs: 2.5, sm: 4 }, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 3, maxWidth: 760 }}>
+      <Stack spacing={0.75}>
+        <Typography variant="h5" fontWeight={700}>Publish a new video</Typography>
+        <Typography variant="body2" color="text.secondary">Your browser uploads directly to object storage; the platform then creates adaptive HLS streams and thumbnails asynchronously.</Typography>
+      </Stack>
+      <Box component="form" mt={3} onSubmit={formik.handleSubmit}>
         <TextField
           label="Title"
           name="title"
@@ -88,15 +93,6 @@ const VideoUpload: React.FC = () => {
             previewType="video"
           />
 
-          <FileSelector
-            name="thumbnail"
-            label="Select Thumbnail (optional)"
-            accept="image/*"
-            onChange={file => formik.setFieldValue('thumbnail', file)}
-            selectedFile={formik.values.thumbnail}
-            uploading={uploading}
-            previewType="image"
-          />
         </Box>
         <Box mt={2}>
           <Button
@@ -114,15 +110,12 @@ const VideoUpload: React.FC = () => {
             {uploading ? 'Uploading...' : 'Upload'}
           </Button>
         </Box>
-        {uploading && <UploadProgress value={progress} />}
-        {error && <Typography color="error" mt={2}>{error}</Typography>}
+        {(uploading || phase === 'complete') && <UploadProgress value={progress} phase={phase} />}
+        {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
       </Box>
     </Paper>
   );
 };
 
 export default VideoUpload;
-
-
-
 

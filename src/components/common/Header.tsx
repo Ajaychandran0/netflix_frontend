@@ -1,4 +1,5 @@
-import { AppBar, Toolbar, Typography, Box, Avatar, Menu, MenuItem, Button } from '@mui/material';
+import { AppBar, Toolbar, Typography, Box, Avatar, Menu, MenuItem, Button, Stack } from '@mui/material';
+import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import { useDispatch } from 'react-redux';
 import { logout, login } from '../../store/slices/authSlice';
 import { useState, useEffect } from 'react';
@@ -9,19 +10,22 @@ import { User } from '../../types/auth';
 
 const Header: React.FC = () => {
   const { isAuthenticated, user, isAdmin } = useAuth();
-  console.log('Header', { isAuthenticated, user }, "in header");
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   useEffect(() => {
-    if (!user && !isAuthenticated) {
+    if (!isAuthenticated) setAnchorEl(null);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!user && isAuthenticated) {
       fetchUserProfile()
         .then((user: User) => {
           dispatch(login(user));
         })
-        .catch((error: unknown) => {
-          console.error('Failed to fetch user profile:', error);
+        .catch(() => {
+          dispatch(logout());
         });
     }
   }, [dispatch, user, isAuthenticated]);
@@ -35,6 +39,7 @@ const Header: React.FC = () => {
   };
 
   const handleLogout = () => {
+    setAnchorEl(null);
     dispatch(logout());
     navigate('/login');
   };
@@ -43,20 +48,15 @@ const Header: React.FC = () => {
     <AppBar position="fixed" sx={{ backgroundColor: '#141414' }}>
       <Toolbar sx={{ px: '2rem', justifyContent: 'space-between', paddingTop: '1rem' }}>
         <Box sx={{ flexGrow: 1 }}>
-          <a href="/">
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg"
-              alt="Netflix Logo"
-              style={{ height: '36px' }}
-            />
-          </a>
+          <Button onClick={() => navigate('/')} sx={{ color: 'common.white', p: 0, fontSize: '1.1rem', fontWeight: 900, letterSpacing: 1.2 }}>STREAMLINE<span style={{ color: '#e50914' }}>.</span></Button>
         </Box>
         {isAuthenticated ? (
           <>
+            <Stack direction="row" spacing={1} alignItems="center">
             {isAdmin && (
               <Button
                 color="inherit"
-                sx={{ mr: 2 }}
+                startIcon={<DashboardOutlinedIcon />}
                 onClick={() => navigate('/dashboard')}
               >
                 Dashboard
@@ -73,12 +73,12 @@ const Header: React.FC = () => {
               <MenuItem onClick={() => navigate('/profile')}>Profile</MenuItem>
               <MenuItem onClick={handleLogout}>Logout</MenuItem>
             </Menu>
+            </Stack>
           </>
         ) : (
           <Typography
             variant="body1"
-            component="a"
-            href="/login"
+            onClick={() => navigate('/login')}
             sx={{ color: '#fff', textDecoration: 'none' }}
           >
             Login

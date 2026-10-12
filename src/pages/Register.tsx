@@ -12,7 +12,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { login } from '../store/slices/authSlice';
-import { signUp } from '../services/authService';
+import { signUp, fetchUserProfile } from '../services/authService';
 import useAuth from '../hooks/useAuth';
 
 const Register = () => {
@@ -36,8 +36,9 @@ const Register = () => {
     }
     try {
       const response = await signUp({ email: formData.email, password: formData.password });
-      const { token, user } = response.data;
+      const { token } = response.data;
       localStorage.setItem('token', token);
+      const user = await fetchUserProfile();
       dispatch(login(user));
       navigate('/');
     } catch (err) {
