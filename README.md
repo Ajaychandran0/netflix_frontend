@@ -2,7 +2,7 @@
 
 The Streamline client is the browser experience for the video platform. It makes the backend workflow visible: catalogue browsing and HLS playback are public, while authenticated publisher flows coordinate multipart uploads and asynchronous processing state.
 
-For the full system design, start with the backend [architecture documentation](../netflix_backend/docs/architecture.md).
+For the full system design, start with the backend [architecture documentation](https://github.com/Ajaychandran0/netflix_backend/blob/main/docs/architecture.md).
 
 ## Features
 
