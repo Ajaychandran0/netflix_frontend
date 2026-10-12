@@ -1,6 +1,6 @@
 import axios from 'axios';
 import axiosInstance from './axiosInstance';
-import type { PaginatedVideos, PlaybackInfo, UploadStatus } from '../types/video';
+import type { PaginatedVideos, PlaybackInfo, UploadStatus, VideoProgress } from '../types/video';
 
 function messageFor(error: unknown, fallback: string): Error {
   if (axios.isAxiosError(error) && error.response?.data?.message) {
@@ -26,6 +26,15 @@ export async function listMyUploads(): Promise<UploadStatus[]> {
     return response.data.data as UploadStatus[];
   } catch (error) {
     throw messageFor(error, 'Unable to load your upload status.');
+  }
+}
+
+export async function getVideoProgress(videoId: string): Promise<VideoProgress> {
+  try {
+    const response = await axiosInstance.get(`/api/content/videos/${videoId}/progress`);
+    return response.data.data as VideoProgress;
+  } catch (error) {
+    throw messageFor(error, 'Unable to load video processing progress.');
   }
 }
 

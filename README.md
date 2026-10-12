@@ -1,118 +1,84 @@
-# Netflix Frontend Clone
+# Streamline Web Client
 
-This project is a Netflix-inspired frontend application built using React, TypeScript, and Material-UI. It provides a user-friendly interface for browsing, registering, logging in, and managing user profiles.
+The Streamline client is the browser experience for the video platform. It makes the backend workflow visible: catalogue browsing and HLS playback are public, while authenticated publisher flows coordinate multipart uploads and asynchronous processing state.
+
+For the full system design, start with the backend [architecture documentation](../netflix_backend/docs/architecture.md).
 
 ## Features
 
-- **Authentication**: Users can register, log in, and log out securely.
-- **User Profile**: View and edit user details.
-- **Responsive Header**: A fixed header with a Netflix-style theme that adapts to different screen sizes.
-- **Global Theme**: A Netflix red theme applied globally using Material-UI's `ThemeProvider`.
-- **Centralized State Management**: Redux is used to manage authentication and user data.
-- **Optimized API Calls**: API calls are centralized and optimized to avoid redundancy.
+- Public published-video catalogue
+- HLS playback with native browser support and `hls.js` fallback
+- Sign-up, sign-in, profile, and JWT-backed API requests
+- Publisher upload workspace with multipart source upload progress
+- Processing-state polling for a publisher's own jobs
+- Responsive Material UI interface designed to explain the pipeline, not just play media
 
-## Project Structure
+## Local setup
 
-```
-src/
-├── components/       # Reusable UI components (e.g., Header, Layout)
-├── hooks/            # Custom React hooks (e.g., useAuth)
-├── pages/            # Page components (e.g., Login, Register, UserProfile)
-├── services/         # API service files (e.g., authService)
-├── store/            # Redux store and slices
-├── styles/           # Global styles and themes
-├── types/            # TypeScript type definitions
-├── utils/            # Utility functions
+```bash
+npm install
 ```
 
-## Installation
+Create `.env`:
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-repo/netflix-frontend-clone.git
-   ```
+```dotenv
+VITE_API_BASE_URL=http://localhost:3000
+```
 
-2. Navigate to the project directory:
-   ```bash
-   cd netflix-frontend-clone
-   ```
+Then run:
 
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
+```bash
+npm run dev
+```
 
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-5. Open the app in your browser at `http://localhost:3000`.
+The Vite URL is normally `http://localhost:5173`. Start the backend stack first; see [local development](../netflix_backend/docs/local-development.md).
 
 ## Scripts
 
-- `npm run dev`: Start the development server.
-- `npm run build`: Build the project for production.
-- `npm run lint`: Run ESLint to check for code quality issues.
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start Vite development server |
+| `npm run build` | Type-check and create a production build |
+| `npm run lint` | Run ESLint |
+| `npm run preview` | Serve the production build locally |
 
-## Environment Variables
+## Frontend flow
 
-Create a `.env` file in the root directory and add the following variables:
-
+```mermaid
+flowchart LR
+    Catalogue[Public catalogue] --> Player[HLS player]
+    Publisher[Authenticated publisher] --> Upload[Multipart upload workspace]
+    Upload -->|Presigned URLs| Storage[MinIO/S3 direct upload]
+    Upload -->|Complete with ETags| API[Gateway + Content Service]
+    API --> Status[Processing-state polling]
+    Status --> Catalogue
 ```
-VITE_API_BASE_URL=<your-api-base-url>
+
+The browser does not receive MinIO credentials. It receives temporary presigned URLs and uploads each file part directly to object storage.
+
+## Code structure
+
+```text
+src/
+├── components/      # Shared header/layout, upload UI, HLS player
+├── hooks/           # Authentication, upload, public videos, personal upload status
+├── pages/           # Catalogue, authentication, profile, upload workspace, dashboard
+├── services/        # Axios API clients grouped by domain
+├── store/           # Redux authentication state
+├── styles/          # Material UI theme and global styling
+├── types/           # API-facing TypeScript models
+└── utils/           # Multipart chunking and API-error helpers
 ```
 
-## Key Components
+## MVP access model
 
-### Header
-- Displays the Netflix logo.
-- Shows the user's avatar and menu options (Profile, Logout) when logged in.
-- Provides a login link for unauthenticated users.
+Published videos are viewable without a token. Uploading is currently an `ADMIN`-gated UI workflow. A production system should replace this coarse role gate with a server-enforced publisher entitlement and keep the content service inaccessible from the public network.
 
-### UserProfile Page
-- Fetches user details from the Redux store or API.
-- Allows users to edit their profile information.
+## Verification checklist
 
-### Register Page
-- Redirects authenticated users to the home page.
-- Provides a registration form for new users.
+```bash
+npm run lint
+npm run build
+```
 
-## API Integration
-
-- All API calls are centralized in the `authService` file.
-- Axios is used for making HTTP requests.
-- The `/profile` API is optimized to avoid redundant calls.
-
-## Technologies Used
-
-- **React**: For building the user interface.
-- **TypeScript**: For type-safe development.
-- **Material-UI**: For styling and responsive design.
-- **Redux**: For state management.
-- **Axios**: For API requests.
-
-## Contributing
-
-1. Fork the repository.
-2. Create a new branch:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-3. Commit your changes:
-   ```bash
-   git commit -m 'Add some feature'
-   ```
-4. Push to the branch:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-5. Open a pull request.
-
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for details.
-
----
-
-Enjoy building and exploring the Netflix Frontend Clone!
+For end-to-end verification, register/sign in, upload a small video as an authorized publisher, observe the processing state, and play the completed HLS stream from the catalogue.

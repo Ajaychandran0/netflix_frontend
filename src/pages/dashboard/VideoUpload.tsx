@@ -21,11 +21,7 @@ const validationSchema = Yup.object({
   video: Yup.mixed().required('A video file is required'),
 });
 
-interface VideoUploadProps {
-  onUploaded?: (videoId: string) => void;
-}
-
-const VideoUpload: React.FC<VideoUploadProps> = ({ onUploaded }) => {
+const VideoUpload: React.FC = () => {
   const { upload, uploading, progress, error, phase } = useVideoUpload();
 
   const formik = useFormik({
@@ -45,9 +41,8 @@ const VideoUpload: React.FC<VideoUploadProps> = ({ onUploaded }) => {
         total_parts: Math.ceil(values.video.size / CHUNK_SIZE),
       };
       try {
-        const videoId = await upload(meta, values.video);
+        await upload(meta, values.video);
         resetForm();
-        if (videoId) onUploaded?.(videoId);
       } catch {
         // The hook provides the user-facing message so the form can stay intact for a retry.
       }
@@ -123,5 +118,4 @@ const VideoUpload: React.FC<VideoUploadProps> = ({ onUploaded }) => {
 };
 
 export default VideoUpload;
-
 

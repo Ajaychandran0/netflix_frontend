@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import {
   Box,
@@ -15,19 +15,31 @@ import { signIn, fetchUserProfile } from '../services/authService';
 import { login } from '../store/slices/authSlice';
 import useAuth from '../hooks/useAuth';
 
+interface LoginNavigationState {
+  returnTo?: string;
+  playVideoId?: string | null;
+}
+
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/');
+      const navigationState = location.state as LoginNavigationState | null;
+      const requestedPath = navigationState?.returnTo;
+      const returnTo = requestedPath?.startsWith('/') && !requestedPath.startsWith('//') ? requestedPath : '/';
+      navigate(returnTo, {
+        replace: true,
+        state: navigationState?.playVideoId ? { playVideoId: navigationState.playVideoId } : null,
+      });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, location.state, navigate]);
 
   const handleLogin = async (email: string, password: string) => {
     try {
@@ -35,7 +47,6 @@ const Login = () => {
       localStorage.setItem('token', token);
       const userProfile = await fetchUserProfile();
       dispatch(login(userProfile));
-      navigate('/');
     } catch (error) {
       console.log('Login error:', error);
       setError(error instanceof Error ? error.message : typeof error === 'string' ? error : 'An unexpected error occurred');

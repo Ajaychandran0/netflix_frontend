@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Box, Button, Chip, Container, Dialog, DialogActions, DialogContent, DialogTitle, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Container, Dialog, DialogActions, DialogContent, DialogTitle, LinearProgress, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import MovieOutlinedIcon from '@mui/icons-material/MovieOutlined';
@@ -25,7 +25,7 @@ function formatDate(value: string) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { uploads, error, refresh } = useMyUploads({ poll: false });
+  const { uploads, error, updateUpload, removeUpload } = useMyUploads();
   const [search, setSearch] = useState('');
   const [editVideo, setEditVideo] = useState<UploadStatus | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UploadStatus | null>(null);
@@ -52,9 +52,11 @@ export default function Dashboard() {
     setSaving(true);
     setMutationError(null);
     try {
-      await updateVideo(editVideo.id, { title: editTitle.trim(), description: editDescription.trim() });
+      const title = editTitle.trim();
+      const description = editDescription.trim();
+      await updateVideo(editVideo.id, { title, description });
+      updateUpload(editVideo.id, { title, description });
       setEditVideo(null);
-      await refresh();
     } catch (err) {
       setMutationError(err instanceof Error ? err.message : 'Unable to update this video.');
     } finally {
@@ -67,8 +69,8 @@ export default function Dashboard() {
     setMutationError(null);
     try {
       await deleteVideo(deleteTarget.id);
+      removeUpload(deleteTarget.id);
       setDeleteTarget(null);
-      await refresh();
     } catch (err) {
       setMutationError(err instanceof Error ? err.message : 'Unable to delete this video.');
     } finally {
@@ -127,7 +129,7 @@ export default function Dashboard() {
               </TableRow></TableHead>
               <TableBody>{filteredUploads.map((video) => <TableRow key={video.id} hover sx={{ '& td': { borderColor: 'rgba(255,255,255,.07)' } }}>
                 <TableCell><Stack direction="row" spacing={1.5} alignItems="center"><Box component="img" src={video.thumbnail_url || undefined} alt="" sx={{ width: 88, height: 52, borderRadius: 1.5, objectFit: 'cover', bgcolor: '#25252b' }} /><Box><Typography fontWeight={650}>{video.title}</Typography>{video.current_stage && <Typography variant="caption" color="text.secondary">{video.current_stage.replace(/_/g, ' ')}</Typography>}{video.last_error && <Typography variant="caption" color="error.main" display="block">{video.last_error}</Typography>}</Box></Stack></TableCell>
-                <TableCell><Chip size="small" label={video.status.toLowerCase()} color={statusColor[video.status]} sx={{ textTransform: 'capitalize' }} /></TableCell>
+                <TableCell><Stack spacing={0.75} alignItems="flex-start"><Chip size="small" label={video.status.toLowerCase()} color={statusColor[video.status]} sx={{ textTransform: 'capitalize' }} />{['UPLOADING', 'QUEUED', 'PROCESSING'].includes(video.status) && <Box sx={{ width: 120 }}><LinearProgress variant="determinate" value={video.progress ?? 0} sx={{ height: 5, borderRadius: 5 }} /><Typography variant="caption" color="text.secondary">{video.progress ?? 0}%</Typography></Box>}</Stack></TableCell>
                 <TableCell sx={{ color: 'text.secondary' }}>{formatDate(video.created_at)}</TableCell>
                 <TableCell align="right" sx={{ color: 'text.secondary' }}>{video.status === 'COMPLETED' ? demoViews[uploads.filter((item) => item.status === 'COMPLETED').findIndex((item) => item.id === video.id) % demoViews.length].toLocaleString() : '—'}</TableCell>
                 <TableCell align="right"><Stack direction="row" justifyContent="flex-end" spacing={0.5}><Button size="small" onClick={() => openEdit(video)} startIcon={<EditOutlinedIcon fontSize="small" />}>Edit</Button><Button size="small" color="error" onClick={() => { setMutationError(null); setDeleteTarget(video); }} startIcon={<DeleteOutlineRoundedIcon fontSize="small" />}>Delete</Button></Stack></TableCell>
@@ -135,7 +137,7 @@ export default function Dashboard() {
             </Table>
           </TableContainer>}
         </Paper>
-        <Typography variant="caption" color="text.secondary" display="block" textAlign="right" mt={1.5}>Your dashboard refreshes when opened. Processing status updates on the upload page.</Typography>
+        <Typography variant="caption" color="text.secondary" display="block" textAlign="right" mt={1.5}>Your videos load once. Processing progress refreshes every five seconds until each job finishes.</Typography>
       </Container>
       <Dialog open={Boolean(editVideo)} onClose={() => !saving && setEditVideo(null)} fullWidth maxWidth="sm">
         <DialogTitle>Edit video details</DialogTitle>

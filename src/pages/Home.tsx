@@ -1,13 +1,16 @@
-import { useState } from 'react';
-import { Alert, Box, Button, Card, CardActionArea, CardContent, CardMedia, Chip, CircularProgress, Dialog, DialogContent, Divider, Grid, IconButton, Paper, Skeleton, Stack, Typography } from '@mui/material';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, Box, Button, Card, CardActionArea, CardContent, CardMedia, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Grid, IconButton, Paper, Skeleton, Stack, Typography } from '@mui/material';
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
 import MovieFilterOutlinedIcon from '@mui/icons-material/MovieFilterOutlined';
+import { useLocation, useNavigate } from 'react-router-dom';
 import HlsPlayer from '../components/video/HlsPlayer';
 import { useVideos } from '../hooks/useVideos';
+import useAuth from '../hooks/useAuth';
 import { getPlaybackInfo } from '../services/videoService';
 import type { VideoSummary } from '../types/video';
 
 const duration = (value: number | null) => !value ? 'Processing' : `${Math.floor(Math.round(value / 1000) / 60)}:${String(Math.round(value / 1000) % 60).padStart(2, '0')}`;
+type HomeNavigationState = { playVideoId?: string };
 
 function VideoCard({ video, onPlay }: { video: VideoSummary; onPlay: (video: VideoSummary) => void }) {
   return <Card sx={{ height: '100%', bgcolor: 'background.paper', border: 1, borderColor: 'divider', transition: 'transform .2s, border-color .2s', '&:hover': { transform: 'translateY(-4px)', borderColor: 'primary.main' } }}><CardActionArea onClick={() => onPlay(video)} sx={{ height: '100%', alignItems: 'stretch' }}>
@@ -20,10 +23,45 @@ function VideoCard({ video, onPlay }: { video: VideoSummary; onPlay: (video: Vid
 
 export default function Home() {
   const { videos, isLoading, error } = useVideos();
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const requestedPlayVideoId = (location.state as HomeNavigationState | null)?.playVideoId;
   const [stream, setStream] = useState<{ url: string; title: string } | null>(null);
   const [isOpening, setIsOpening] = useState(false);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
-  const openVideo = async (video: VideoSummary) => { setIsOpening(true); setPlaybackError(null); try { const playback = await getPlaybackInfo(video.id); setStream({ url: playback.playback_url, title: video.title }); } catch (err) { setPlaybackError(err instanceof Error ? err.message : 'Unable to start playback.'); } finally { setIsOpening(false); } };
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
+  const [loginPromptVideoId, setLoginPromptVideoId] = useState<string | null>(null);
+  const autoPlayHandled = useRef<string | null>(null);
+  const openVideo = useCallback(async (video: VideoSummary) => {
+    if (!isAuthenticated) {
+      setLoginPromptVideoId(video.id);
+      setLoginPromptOpen(true);
+      return;
+    }
+    setIsOpening(true);
+    setPlaybackError(null);
+    try {
+      const playback = await getPlaybackInfo(video.id);
+      setStream({ url: playback.playback_url, title: video.title });
+    } catch (err) {
+      setPlaybackError(err instanceof Error ? err.message : 'Unable to start playback.');
+    } finally {
+      setIsOpening(false);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!requestedPlayVideoId || !isAuthenticated || isLoading || autoPlayHandled.current === requestedPlayVideoId) return;
+    autoPlayHandled.current = requestedPlayVideoId;
+    const video = videos.find((item) => item.id === requestedPlayVideoId);
+    if (video) {
+      void openVideo(video);
+    } else {
+      setPlaybackError('That video is no longer available in the catalogue.');
+    }
+    navigate(location.pathname, { replace: true, state: null });
+  }, [isAuthenticated, isLoading, location.pathname, navigate, openVideo, requestedPlayVideoId, videos]);
   const featured = videos[0];
 
   return <Box sx={{ px: { xs: 2, sm: 4, lg: 7 }, py: { xs: 3, sm: 5 }, maxWidth: 1600, mx: 'auto' }}>
@@ -35,6 +73,14 @@ export default function Home() {
     <Divider sx={{ my: 5 }} /><Stack direction="row" justifyContent="space-between" alignItems="end" sx={{ mb: 2.25 }}><Box><Typography variant="h5" fontWeight={800}>Published videos</Typography><Typography variant="body2" color="text.secondary">Completed videos available for adaptive streaming.</Typography></Box><Typography variant="body2" color="text.secondary">{videos.length} videos</Typography></Stack>
     {error && <Alert severity="warning" sx={{ mb: 2 }}>{error}</Alert>}
     {isLoading ? <Grid container spacing={2}>{[1, 2, 3, 4].map((item) => <Grid key={item} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}><Skeleton variant="rounded" height={210} /></Grid>)}</Grid> : videos.length > 0 ? <Grid container spacing={2}>{videos.map((video) => <Grid key={video.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}><VideoCard video={video} onPlay={openVideo} /></Grid>)}</Grid> : <Paper variant="outlined" sx={{ p: 5, textAlign: 'center' }}><MovieFilterOutlinedIcon color="disabled" sx={{ fontSize: 42 }} /><Typography variant="h6" mt={1}>No published videos yet</Typography><Typography color="text.secondary" mt={1}>Check back soon for new releases.</Typography></Paper>}
+    <Dialog open={loginPromptOpen} onClose={() => setLoginPromptOpen(false)}>
+      <DialogTitle>Sign in to watch</DialogTitle>
+      <DialogContent><Typography color="text.secondary">You can browse the library without an account. Sign in to start playback.</Typography></DialogContent>
+      <DialogActions sx={{ p: 2 }}>
+        <Button onClick={() => setLoginPromptOpen(false)}>Maybe later</Button>
+        <Button variant="contained" onClick={() => { setLoginPromptOpen(false); navigate('/login', { state: { returnTo: location.pathname, playVideoId: loginPromptVideoId } }); }}>Sign in</Button>
+      </DialogActions>
+    </Dialog>
     <Dialog open={Boolean(stream) || isOpening} onClose={() => { if (!isOpening) setStream(null); }} maxWidth="lg" fullWidth PaperProps={{ sx: { bgcolor: 'background.paper' } }}><DialogContent sx={{ p: { xs: 1, sm: 2 } }}>{isOpening ? <Box sx={{ display: 'grid', placeItems: 'center', minHeight: 300 }}><CircularProgress /></Box> : stream && <HlsPlayer source={stream.url} title={stream.title} />}</DialogContent></Dialog>
   </Box>;
 }

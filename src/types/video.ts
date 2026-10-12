@@ -13,6 +13,16 @@ export interface UploadStatus extends VideoSummary {
   description: string | null;
   current_stage: string | null;
   last_error: string | null;
+  progress?: number;
+}
+
+export interface VideoProgress {
+  video_id: string;
+  status: VideoStatus;
+  stage: string | null;
+  progress: number;
+  thumbnail_url: string | null;
+  updated_at: string | null;
 }
 
 export interface PaginatedVideos {
